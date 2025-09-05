@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reddit Authentication</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+        .loading { color: #ff4500; }
+    </style>
+</head>
+<body>
+    <h2>🔄 Processing Reddit Authentication...</h2>
+    <p class="loading">Please wait while we complete your login...</p>
+    
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const state = urlParams.get('state');
+        const error = urlParams.get('error');
+
+        if (error) {
+            alert('Authentication failed: ' + error);
+            window.location.href = '/';
+        } else if (code && state) {
+            // Verify state
+            const savedState = localStorage.getItem('oauth_state');
+            if (state !== savedState) {
+                alert('Invalid state parameter - please try again');
+                window.location.href = '/';
+                return;
+            }
+
+            // Get stored credentials
+            const credentials = JSON.parse(localStorage.getItem('reddit_oauth_credentials') || '{}');
+            
+            if (!credentials.clientId || !credentials.clientSecret) {
+                alert('Missing credentials - please login again');
+                window.location.href = '/';
+                return;
+            }
+
+            // Exchange code for token
+            fetch('/api/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    code: code,
+                    clientId: credentials.clientId,
+                    clientSecret: credentials.clientSecret,
+                    redirectUri: window.location.origin + '/auth/callback'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.access_token) {
+                    // Store token and redirect back
+                    localStorage.setItem('reddit_access_token', data.access_token);
+                    localStorage.setItem('reddit_authenticated', 'true');
+                    window.location.href = '/?authenticated=true&code=' + code + '&state=' + state;
+                } else {
+                    console.error('Token exchange failed:', data);
+                    alert('Login failed: ' + (data.error || 'Unknown error'));
+                    window.location.href = '/';
+                }
+            })
+            .catch(error => {
+                console.error('Authentication error:', error);
+                alert('Network error during authentication');
+                window.location.href = '/';
+            });
+        } else {
+            alert('Missing authorization parameters');
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>
