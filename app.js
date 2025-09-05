@@ -1,4 +1,4 @@
-// Reddit Assistant - AI-Powered Automated Content Manager - FIXED VERSION
+// Reddit Assistant - AI-Powered Automated Content Manager - REAL API VERSION
 
 class RedditAssistant {
     constructor() {
@@ -240,9 +240,9 @@ class RedditAssistant {
         }
     }
 
-    // Authentication Methods - Fixed
+    // REAL Authentication Methods
     async authenticateUser() {
-        console.log('Starting authentication...');
+        console.log('Starting REAL Reddit authentication...');
         
         const usernameEl = document.getElementById('redditUsername');
         const passwordEl = document.getElementById('redditPassword');
@@ -276,26 +276,64 @@ class RedditAssistant {
         this.showLoadingOverlay('Authenticating with Reddit...');
         
         try {
-            console.log('Simulating Reddit authentication...');
-            // Simulate Reddit authentication delay
-            await this.simulateDelay(2000);
+            console.log('Making REAL Reddit authentication request...');
             
-            // Store credentials and create mock authentication
-            this.accessToken = 'demo_access_token_' + Date.now();
-            this.refreshToken = 'demo_refresh_token_' + Date.now();
-            this.isAuthenticated = true;
-            
-            // Generate realistic mock user info
-            this.userInfo = {
-                name: username,
-                link_karma: Math.floor(Math.random() * 5000) + 1000,
-                comment_karma: Math.floor(Math.random() * 3000) + 500,
-                created_utc: Date.now() / 1000 - (Math.random() * 365 * 24 * 60 * 60),
-                total_karma: 0
-            };
-            this.userInfo.total_karma = this.userInfo.link_karma + this.userInfo.comment_karma;
+            // Real Reddit authentication
+            const authResponse = await fetch(this.config.reddit.tokenUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'User-Agent': this.config.reddit.userAgent
+                },
+                body: new URLSearchParams({
+                    grant_type: 'password',
+                    username: username,
+                    password: password
+                })
+            });
 
-            console.log('Authentication successful, user info:', this.userInfo);
+            if (!authResponse.ok) {
+                throw new Error(`Authentication failed: ${authResponse.status} ${authResponse.statusText}`);
+            }
+
+            const authData = await authResponse.json();
+            
+            if (authData.error) {
+                throw new Error(`Reddit error: ${authData.error}`);
+            }
+
+            // Store tokens
+            this.accessToken = authData.access_token;
+            this.refreshToken = authData.refresh_token;
+            this.isAuthenticated = true;
+
+            console.log('Authentication successful, fetching user info...');
+
+            // Fetch REAL user info via proxy
+            const userResponse = await fetch('/api/me', {
+                headers: {
+                    'Authorization': `Bearer ${this.accessToken}`
+                }
+            });
+
+            if (!userResponse.ok) {
+                throw new Error(`Failed to fetch user info: ${userResponse.status}`);
+            }
+
+            const userData = await userResponse.json();
+            
+            // Store real user info
+            this.userInfo = {
+                name: userData.name,
+                link_karma: userData.link_karma || 0,
+                comment_karma: userData.comment_karma || 0,
+                created_utc: userData.created_utc,
+                total_karma: (userData.link_karma || 0) + (userData.comment_karma || 0),
+                is_premium: userData.is_gold || false
+            };
+
+            console.log('Real user info fetched:', this.userInfo);
 
             // Save authentication and credentials
             this.saveAuthToken();
@@ -422,7 +460,7 @@ class RedditAssistant {
     async executeAutoPost() {
         if (!this.autoPostEnabled) return;
 
-        console.log('Executing auto post...');
+        console.log('Executing REAL auto post...');
 
         try {
             const subreddits = this.getTargetSubreddits();
@@ -443,8 +481,8 @@ class RedditAssistant {
             // Generate content using AI
             const content = await this.generatePostContent(subreddit, topic, style);
             
-            // Simulate posting to Reddit
-            await this.simulateRedditPost(subreddit, content);
+            // REAL posting to Reddit via API
+            const result = await this.postToReddit(subreddit, content);
             
             // Update analytics
             this.analytics.posts_generated++;
@@ -467,6 +505,55 @@ class RedditAssistant {
         } finally {
             this.hideLoadingOverlay();
         }
+    }
+
+    // REAL Reddit API Methods
+    async postToReddit(subreddit, content) {
+        const postData = {
+            sr: subreddit,
+            kind: 'self',
+            title: content.title,
+            text: content.content,
+            api_type: 'json'
+        };
+
+        const response = await fetch('/api/submit', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${this.accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(postData)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to post: ${response.status}`);
+        }
+
+        return await response.json();
+    }
+
+    async commentOnReddit(postId, comment) {
+        const commentData = {
+            parent: postId,
+            text: comment,
+            api_type: 'json'
+        };
+
+        const response = await fetch('/api/comment', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${this.accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(commentData)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to comment: ${response.status}`);
+        }
+
+        return await response.json();
     }
 
     async generatePostNow() {
@@ -520,7 +607,7 @@ class RedditAssistant {
     async executeAutoComment() {
         if (!this.autoCommentEnabled) return;
 
-        console.log('Executing auto comment...');
+        console.log('Executing REAL auto comment...');
 
         try {
             const subreddits = this.getCommentSubreddits();
@@ -536,12 +623,12 @@ class RedditAssistant {
             const subreddit = subreddits[Math.floor(Math.random() * subreddits.length)];
             const commentType = commentTypes[Math.floor(Math.random() * commentTypes.length)];
 
-            // Simulate finding a post and generating comment
-            const post = await this.simulateGetRandomPost(subreddit, strategy);
+            // Get REAL posts from subreddit
+            const post = await this.getRandomPostFromSubreddit(subreddit, strategy);
             const comment = await this.generateCommentContent(post, commentType);
             
-            // Simulate posting comment
-            await this.simulateRedditComment(post, comment);
+            // REAL commenting on Reddit
+            await this.commentOnReddit(post.name, comment);
             
             // Update analytics
             this.analytics.comments_generated++;
@@ -562,6 +649,31 @@ class RedditAssistant {
             this.analytics.failed_actions++;
             this.saveAnalytics();
         }
+    }
+
+    async getRandomPostFromSubreddit(subreddit, strategy) {
+        const response = await fetch(`https://www.reddit.com/r/${subreddit}/${strategy}.json?limit=50`);
+        
+        if (!response.ok) {
+            throw new Error(`Failed to fetch posts from r/${subreddit}`);
+        }
+
+        const data = await response.json();
+        const posts = data.data.children.map(child => child.data);
+        
+        // Filter suitable posts
+        const suitablePosts = posts.filter(post => 
+            post.ups >= 10 &&
+            !post.stickied &&
+            !post.locked &&
+            post.created_utc > (Date.now() / 1000 - 86400) // Less than 24 hours old
+        );
+
+        if (suitablePosts.length === 0) {
+            throw new Error('No suitable posts found for commenting');
+        }
+
+        return suitablePosts[Math.floor(Math.random() * suitablePosts.length)];
     }
 
     // Content Generation Methods
@@ -614,7 +726,7 @@ Make it engaging and likely to receive upvotes and comments.`;
         const prompt = `${typePrompts[commentType] || typePrompts.helpful} for this Reddit post:
 
 Title: ${post.title}
-Content: ${post.content || 'No additional content'}
+Content: ${post.selftext || 'No additional content'}
 
 Requirements:
 - Keep it conversational and natural
@@ -657,32 +769,6 @@ Write only the comment text, nothing else.`;
             console.error('OpenRouter API call failed:', error);
             throw new Error(`AI generation failed: ${error.message}`);
         }
-    }
-
-    // Simulation Methods (for demo purposes)
-    async simulateRedditPost(subreddit, content) {
-        await this.simulateDelay(1500);
-        return { id: 'post_' + Date.now(), url: `https://reddit.com/r/${subreddit}/comments/demo` };
-    }
-
-    async simulateRedditComment(post, comment) {
-        await this.simulateDelay(1000);
-        return { id: 'comment_' + Date.now() };
-    }
-
-    async simulateGetRandomPost(subreddit, strategy) {
-        await this.simulateDelay(500);
-        const samplePosts = [
-            { title: "What's your favorite programming language and why?", content: "Just curious about everyone's preferences" },
-            { title: "Best practices for code review?", content: "Looking for tips on effective code reviews" },
-            { title: "How do you stay motivated while learning?", content: "Sometimes I feel overwhelmed with all the new technologies" },
-            { title: "Debugging techniques that changed your workflow", content: "Share your favorite debugging strategies" }
-        ];
-        return samplePosts[Math.floor(Math.random() * samplePosts.length)];
-    }
-
-    simulateDelay(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     // UI Update Methods - Fixed
