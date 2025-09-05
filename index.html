@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reddit Assistant - Automated Content Manager</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1 class="app-title">Reddit Assistant</h1>
+                <p class="app-subtitle">AI-Powered Automated Content Manager</p>
+                <div class="connection-status" id="connectionStatus">
+                    <span class="status-indicator" id="statusIndicator"></span>
+                    <span id="statusText">Not Connected</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Navigation -->
+        <nav class="main-nav">
+            <div class="nav-tabs">
+                <button class="nav-tab active" data-tab="login">
+                    <span class="tab-icon">🔑</span>
+                    Login
+                </button>
+                <button class="nav-tab" data-tab="dashboard">
+                    <span class="tab-icon">📊</span>
+                    Dashboard
+                </button>
+                <button class="nav-tab" data-tab="autopost">
+                    <span class="tab-icon">📝</span>
+                    Auto-Post
+                </button>
+                <button class="nav-tab" data-tab="autocomment">
+                    <span class="tab-icon">💬</span>
+                    Auto-Comment
+                </button>
+                <button class="nav-tab" data-tab="analytics">
+                    <span class="tab-icon">📈</span>
+                    Analytics
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Login Tab -->
+            <div class="tab-content active" id="loginTab">
+                <div class="login-section">
+                    <div class="card">
+                        <div class="card__header">
+                            <h3>Reddit Account Authentication</h3>
+                            <p>Connect your Reddit account to enable automated posting and commenting</p>
+                        </div>
+                        <div class="card__body">
+                            <form id="loginForm" class="login-form">
+                                <div class="form-group">
+                                    <label for="redditUsername" class="form-label">Reddit Username</label>
+                                    <input type="text" id="redditUsername" class="form-control" placeholder="your_username" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="redditPassword" class="form-label">Reddit Password</label>
+                                    <input type="password" id="redditPassword" class="form-control" placeholder="your_password" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="clientId" class="form-label">Reddit App Client ID</label>
+                                    <input type="text" id="clientId" class="form-control" placeholder="client_id_here" required>
+                                    <small class="form-help">Get this from Reddit's app preferences</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="clientSecret" class="form-label">Reddit App Client Secret</label>
+                                    <input type="password" id="clientSecret" class="form-control" placeholder="client_secret_here" required>
+                                </div>
+                                <button type="submit" id="loginBtn" class="btn btn--primary btn--full-width">
+                                    <span id="loginBtnText">Connect to Reddit</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <div class="setup-guide">
+                        <h4>Setup Guide:</h4>
+                        <ol>
+                            <li>Go to <a href="https://www.reddit.com/prefs/apps" target="_blank">Reddit App Preferences</a></li>
+                            <li>Create a new "script" application</li>
+                            <li>Copy the Client ID and Client Secret</li>
+                            <li>Enter your credentials above</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Tab -->
+            <div class="tab-content" id="dashboardTab">
+                <div class="dashboard-section">
+                    <div id="accountInfo" class="account-card hidden">
+                        <div class="account-header">
+                            <div class="avatar-placeholder"></div>
+                            <div class="account-details">
+                                <h3 id="accountUsername">Username</h3>
+                                <p id="accountStats">Loading account data...</p>
+                            </div>
+                        </div>
+                        <div class="account-stats">
+                            <div class="stat-item">
+                                <span class="stat-value" id="totalKarma">0</span>
+                                <span class="stat-label">Total Karma</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value" id="postKarma">0</span>
+                                <span class="stat-label">Post Karma</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value" id="commentKarma">0</span>
+                                <span class="stat-label">Comment Karma</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value" id="accountAge">0</span>
+                                <span class="stat-label">Account Age (days)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="automation-status">
+                        <div class="status-card">
+                            <h4>Automation Status</h4>
+                            <div class="automation-controls">
+                                <div class="control-item">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="autoPostEnabled">
+                                        Auto-posting enabled
+                                    </label>
+                                    <span class="status" id="autoPostStatus">Disabled</span>
+                                </div>
+                                <div class="control-item">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="autoCommentEnabled">
+                                        Auto-commenting enabled
+                                    </label>
+                                    <span class="status" id="autoCommentStatus">Disabled</span>
+                                </div>
+                            </div>
+                            <div class="next-action">
+                                <p>Next post: <span id="nextPostTime">Not scheduled</span></p>
+                                <p>Next comment: <span id="nextCommentTime">Not scheduled</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Auto-Post Tab -->
+            <div class="tab-content" id="autopostTab">
+                <div class="autopost-section">
+                    <div class="settings-card">
+                        <h3>Automatic Posting Configuration</h3>
+                        <div class="form-group">
+                            <label for="postInterval" class="form-label">Posting Interval</label>
+                            <select id="postInterval" class="form-control">
+                                <option value="21600000">Every 6 hours</option>
+                                <option value="43200000">Every 12 hours</option>
+                                <option value="86400000">Every 24 hours</option>
+                                <option value="259200000">Every 3 days</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="targetSubreddits" class="form-label">Target Subreddits (comma-separated)</label>
+                            <textarea id="targetSubreddits" class="form-control" rows="3" placeholder="programming,webdev,javascript,python"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="postTopics" class="form-label">Post Topics/Keywords</label>
+                            <textarea id="postTopics" class="form-control" rows="3" placeholder="JavaScript frameworks,Python automation,Web development trends,Programming best practices"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="contentStyle" class="form-label">Content Style</label>
+                            <select id="contentStyle" class="form-control">
+                                <option value="educational">Educational & Informative</option>
+                                <option value="discussion">Discussion Starter</option>
+                                <option value="tutorial">Tutorial & How-to</option>
+                                <option value="news">News & Updates</option>
+                                <option value="question">Question & Help</option>
+                            </select>
+                        </div>
+                        <button id="startAutoPostBtn" class="btn btn--primary">Start Auto-Posting</button>
+                        <button id="stopAutoPostBtn" class="btn btn--secondary hidden">Stop Auto-Posting</button>
+                    </div>
+
+                    <div class="post-queue">
+                        <h4>Post Queue</h4>
+                        <div id="postQueueList" class="queue-list">
+                            <p class="text-muted">No posts in queue</p>
+                        </div>
+                        <button id="generatePostNowBtn" class="btn btn--outline">Generate Post Now</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Auto-Comment Tab -->
+            <div class="tab-content" id="autocommentTab">
+                <div class="autocomment-section">
+                    <div class="settings-card">
+                        <h3>Automatic Commenting Configuration</h3>
+                        <div class="form-group">
+                            <label for="commentInterval" class="form-label">Commenting Interval</label>
+                            <select id="commentInterval" class="form-control">
+                                <option value="1800000">Every 30 minutes</option>
+                                <option value="3600000">Every hour</option>
+                                <option value="7200000">Every 2 hours</option>
+                                <option value="14400000">Every 4 hours</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="commentSubreddits" class="form-label">Monitor Subreddits</label>
+                            <textarea id="commentSubreddits" class="form-control" rows="3" placeholder="programming,webdev,learnprogramming,javascript"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="commentStrategy" class="form-label">Comment Strategy</label>
+                            <select id="commentStrategy" class="form-control">
+                                <option value="hot">Comment on Hot posts</option>
+                                <option value="new">Comment on New posts</option>
+                                <option value="rising">Comment on Rising posts</option>
+                                <option value="mixed">Mixed strategy</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="commentTypes" class="form-label">Comment Types</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="helpfulComments" checked>
+                                    Helpful & Informative
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="questionComments" checked>
+                                    Follow-up Questions
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="supportiveComments" checked>
+                                    Supportive & Agreeable
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="funnyComments">
+                                    Witty & Humorous
+                                </label>
+                            </div>
+                        </div>
+                        <button id="startAutoCommentBtn" class="btn btn--primary">Start Auto-Commenting</button>
+                        <button id="stopAutoCommentBtn" class="btn btn--secondary hidden">Stop Auto-Commenting</button>
+                    </div>
+
+                    <div class="comment-activity">
+                        <h4>Recent Comments</h4>
+                        <div id="recentComments" class="activity-list">
+                            <p class="text-muted">No recent comments</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Tab -->
+            <div class="tab-content" id="analyticsTab">
+                <div class="analytics-section">
+                    <div class="analytics-overview">
+                        <div class="metric-card">
+                            <div class="metric-value" id="totalPosts">0</div>
+                            <div class="metric-label">Total Posts</div>
+                            <div class="metric-change" id="postsChange">--</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="totalComments">0</div>
+                            <div class="metric-label">Total Comments</div>
+                            <div class="metric-change" id="commentsChange">--</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="karmaGained">0</div>
+                            <div class="metric-label">Karma Gained</div>
+                            <div class="metric-change" id="karmaChange">--</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="successRate">0%</div>
+                            <div class="metric-label">Success Rate</div>
+                            <div class="metric-change" id="successChange">--</div>
+                        </div>
+                    </div>
+
+                    <div class="performance-chart">
+                        <h4>Karma Growth Over Time</h4>
+                        <div class="chart-container" style="position: relative; height: 300px;">
+                            <canvas id="karmaChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="activity-log">
+                        <h4>Activity Log</h4>
+                        <div id="activityLog" class="log-container">
+                            <p class="text-muted">No activity recorded</p>
+                        </div>
+                        <button id="exportDataBtn" class="btn btn--outline">Export Data</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Toast Notifications -->
+        <div id="toastContainer" class="toast-container"></div>
+
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="loading-overlay hidden">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <p id="loadingText">Processing...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
