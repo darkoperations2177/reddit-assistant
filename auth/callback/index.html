@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reddit Authentication</title>
+</head>
+<body>
+    <h2>Processing Reddit Authentication...</h2>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const state = urlParams.get('state');
+        const error = urlParams.get('error');
+
+        if (error) {
+            alert('Authentication failed: ' + error);
+            window.location.href = '/';
+        } else if (code && state) {
+            // Verify state
+            const savedState = localStorage.getItem('oauth_state');
+            if (state !== savedState) {
+                alert('Invalid state parameter');
+                window.location.href = '/';
+                return;
+            }
+
+            // Get stored credentials
+            const credentials = JSON.parse(localStorage.getItem('reddit_oauth_credentials') || '{}');
+            
+            if (!credentials.clientId || !credentials.clientSecret) {
+                alert('Missing credentials');
+                window.location.href = '/';
+                return;
+            }
+
+            // Exchange code for token
+            fetch('/api/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    code: code,
+                    clientId: credentials.clientId,
+                    clientSecret: credentials.clientSecret,
+                    redirectUri: window.location.origin + '/auth/callback'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.access_token) {
+                    // Store token and redirect back
+                    localStorage.setItem('reddit_access_token', data.access_token);
+                    localStorage.setItem('reddit_authenticated', 'true');
+                    window.location.href = '/?authenticated=true';
+                } else {
+                    alert('Token exchange failed: ' + (data.error || 'Unknown error'));
+                    window.location.href = '/';
+                }
+            })
+            .catch(error => {
+                alert('Authentication error: ' + error.message);
+                window.location.href = '/';
+            });
+        } else {
+            alert('Missing authorization code');
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>
