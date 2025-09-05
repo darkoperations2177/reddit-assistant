@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reddit OAuth Callback</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            padding: 50px;
+            background: #1a1a1b;
+            color: #d7dadc;
+        }
+        .loading { color: #ff4500; }
+        .error { color: #ff4444; }
+    </style>
+</head>
+<body>
+    <h2>🔄 Processing Reddit Authentication...</h2>
+    <p class="loading" id="status">Exchanging authorization code for access token...</p>
+    
+    <script>
+        console.log('OAuth callback page loaded');
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const state = urlParams.get('state');
+        const error = urlParams.get('error');
+
+        console.log('URL params:', { code: !!code, state: !!state, error });
+
+        if (error) {
+            document.getElementById('status').innerHTML = '<span class="error">❌ Authentication failed: ' + error + '</span>';
+            setTimeout(() => window.location.href = '/', 3000);
+        } else if (code && state) {
+            // Verify state matches
+            const savedState = localStorage.getItem('oauth_state');
+            console.log('State check:', { received: state, saved: savedState });
+            
+            if (state !== savedState) {
+                document.getElementById('status').innerHTML = '<span class="error">❌ Security error - invalid state</span>';
+                setTimeout(() => window.location.href = '/', 3000);
+                return;
+            }
+
+            // Get stored credentials
+            const credentialsStr = localStorage.getItem('reddit_oauth_credentials');
+            console.log('Stored credentials:', !!credentialsStr);
+            
+            if (!credentialsStr) {
+                document.getElementById('status').innerHTML = '<span class="error">❌ No credentials found - please try again</span>';
+                setTimeout(() => window.location.href = '/', 3000);
+                return;
+            }
+
+            const credentials = JSON.parse(credentialsStr);
+            
+            if (!credentials.clientId || !credentials.clientSecret) {
+                document.getElementById('status').innerHTML = '<span class="error">❌ Invalid credentials - please re-enter them</span>';
+                setTimeout(() => window.location.href = '/', 3000);
+                return;
+            }
+
+            // Exchange code for access token
+            document.getElementById('status').textContent = 'Exchanging code for access token...';
+            
+            fetch('/api/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    code: code,
+                    clientId: credentials.clientId,
+                    clientSecret: credentials.clientSecret,
+                    redirectUri: window.location.origin + '/auth/callback'
+                })
+            })
+            .then(response => {
+                console.log('Auth API response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Auth API response:', data);
+                
+                if (data.access_token) {
+                    document.getElementById('status').innerHTML = '✅ Success! Redirecting to dashboard...';
+                    
+                    // Store the access token
+                    localStorage.setItem('reddit_access_token', data.access_token);
+                    if (data.refresh_token) {
+                        localStorage.setItem('reddit_refresh_token', data.refresh_token);
+                    }
+                    
+                    // Redirect back to main app with success parameters
+                    const redirectUrl = `/?authenticated=true&code=${code}&state=${state}`;
+                    console.log('Redirecting to:', redirectUrl);
+                    window.location.href = redirectUrl;
+                    
+                } else {
+                    console.error('No access token in response:', data);
+                    document.getElementById('status').innerHTML = '<span class="error">❌ Token exchange failed: ' + (data.error || 'Unknown error') + '</span>';
+                    setTimeout(() => window.location.href = '/', 5000);
+                }
+            })
+            .catch(error => {
+                console.error('Token exchange error:', error);
+                document.getElementById('status').innerHTML = '<span class="error">❌ Network error: ' + error.message + '</span>';
+                setTimeout(() => window.location.href = '/', 5000);
+            });
+            
+        } else {
+            document.getElementById('status').innerHTML = '<span class="error">❌ Missing authorization code</span>';
+            setTimeout(() => window.location.href = '/', 3000);
+        }
+    </script>
+</body>
+</html>
